@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>عبودية فاطمة - V0.4.2</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Tahoma;
+      text-align: center;
+      padding: 20px;
+    }
+    .hidden { display: none; }
+    .foot { position: relative; display: inline-block; }
+    .spot {
+      width: 20px;
+      height: 20px;
+      background: #1a1a1a;
+      border-radius: 50%;
+      position: absolute;
+      cursor: pointer;
+    }
+    #timer { font-size: 22px; color: red; margin-top: 10px; }
+    input[type="text"], input[type="password"] {
+      margin-top: 10px;
+      padding: 10px;
+      width: 300px;
+    }
+    img {
+      width: 90vw;
+      max-width: 800px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+    #imageList img {
+      max-width: 100px;
+      margin: 5px;
+      border: 2px solid green;
+    }
+  </style>
+</head>
+<body oncontextmenu="return false;">
+
+  <!-- شاشة كلمة السر -->
+  <div id="passwordScreen">
+    <h2>🔒 أدخل كلمة السر للدخول</h2>
+    <input type="password" id="passInput" placeholder="كلمة السر">
+    <button onclick="checkPassword()">دخول</button>
+    <p id="passMsg" style="color:red;"></p>
+  </div>
+
+  <!-- اللعبة -->
+  <div id="game" class="hidden">
+    <h1>👣 عبودية فاطمة V0.4.2</h1>
+    <audio id="intro" src="fatima_intro.mp3" autoplay></audio>
+
+    <div class="foot">
+      <img src="foot_close.jpg" alt="قدم فاطمة الكبيرة">
+      <div id="spotsContainer"></div>
+    </div>
+
+    <div id="timer">الوقت: 300</div>
+    <button onclick="startTasks()">ابدأ المهمة</button>
+
+    <h2>✍️ كتابة الطاعة</h2>
+    <p>اكتب يدويًا فقط: <b>أنا عبدك يا فاطمة</b> (<span id="targetRepeat">10</span> مرات)</p>
+    <input type="text" id="slaveInput" placeholder="اكتب هنا فقط..."
+      onpaste="failCopy()" oncopy="failCopy()" oncut="failCopy()">
+    <button onclick="checkWriting()">تحقق</button>
+    <p id="resultMsg"></p>
+  </div>
+
+  <!-- إخفاء الصور -->
+  <div id="photoHider" class="hidden">
+    <h2>🖼️ برنامج إخفاء الصور</h2>
+    <input type="file" id="imageInput" multiple accept="image/*" />
+    <div id="imageList"></div>
+    <p style="color:gray;">* الصور محمية ولا تظهر إلا من خلال هذا التطبيق</p>
+  </div>
+
+  <!-- الأصوات -->
+  <audio id="cleanCmd" src="fatima_clean_command.mp3"></audio>
+  <audio id="timerStart" src="fatima_timer_start.mp3"></audio>
+  <audio id="success" src="fatima_success.mp3"></audio>
+  <audio id="punishment" src="fatima_punishment.mp3"></audio>
+  <audio id="antiCopy" src="fatima_anti_copy.mp3"></audio>
+
+  <script>
+    // كلمة السر
+    function checkPassword() {
+      const val = document.getElementById("passInput").value;
+      if (val === "0000") {
+        document.getElementById("passwordScreen").classList.add("hidden");
+        document.getElementById("game").classList.remove("hidden");
+      } else {
+        document.getElementById("passMsg").textContent = "كلمة السر خاطئة!";
+      }
+    }
+
+    let failCount = parseInt(localStorage.getItem("failCount")) || 0;
+    let timeLeft = 300;
+    let timer;
+    let cleaned = 0;
+    let totalSpots = 5 + failCount * 5;
+    let writeCount = 10 + failCount * 5;
+
+    function playAudio(id) {
+      const audio = document.getElementById(id);
+      if (audio) audio.play();
+    }
+
+    function failCopy() {
+      playAudio("antiCopy");
+      alert("نسخت؟ المهمة فشلت! ستُعاقب.");
+      failMission();
+      return false;
+    }
+
+    function generateSpots(n) {
+      const container = document.getElementById("spotsContainer");
+      container.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const spot = document.createElement("div");
+        spot.className = "spot";
+        spot.style.top = Math.random() * 400 + "px";
+        spot.style.left = Math.random() * 600 + "px";
+        spot.onclick = function () {
+          spot.style.display = "none";
+          cleaned++;
+          if (cleaned === totalSpots) {
+            clearInterval(timer);
+            playAudio("success");
+            alert("أحسنت! نظفت قدم الملكة. الآن المهمة الثانية...");
+            startSecondTask();
+          }
+        };
+        container.appendChild(spot);
+      }
+    }
+
+    function startTasks() {
+      cleaned = 0;
+      timeLeft = 300;
+      document.getElementById("slaveInput").value = "";
+      document.getElementById("resultMsg").textContent = "";
+      document.getElementById("targetRepeat").textContent = writeCount;
+      generateSpots(totalSpots);
+      document.getElementById("timer").textContent = "الوقت: 300";
+      playAudio("cleanCmd");
+      playAudio("timerStart");
+
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").textContent = "الوقت: " + timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          failMission();
+        }
+      }, 1000);
+    }
+
+    function failMission() {
+      playAudio("punishment");
+      alert("فشلت! ستبدأ من جديد وصعوبة أكبر.");
+      failCount++;
+      localStorage.setItem("failCount", failCount);
+      totalSpots = 5 + failCount * 5;
+      writeCount = 10 + failCount * 5;
+      startTasks();
+    }
+
+    function checkWriting() {
+      const val = document.getElementById("slaveInput").value.trim();
+      const count = (val.match(/أنا عبدك يا فاطمة/g) || []).length;
+      const msg = document.getElementById("resultMsg");
+      if (count >= writeCount) {
+        msg.textContent = "ممتاز! تستحق رضا الملكة.";
+        msg.style.color = "lightgreen";
+        playAudio("success");
+        startSecondTask();
+      } else {
+        msg.textContent = `كتبت فقط ${count} مرات! لا يكفي.`;
+        msg.style.color = "orange";
+        failMission();
+      }
+    }
+
+    // ✅ مهمة ثانية: بعد نجاح المهمة الأولى
+    function startSecondTask() {
+      document.getElementById("game").classList.add("hidden");
+      document.getElementById("photoHider").classList.remove("hidden");
+    }
+
+    // 📷 إخفاء الصور
+    document.getElementById("imageInput").addEventListener("change", function () {
+      const files = this.files;
+      const container = document.getElementById("imageList");
+      container.innerHTML = "";
+      for (let i = 0; i < files.length; i++) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = document.createElement("img");
+          img.src = e.target.result;
+          container.appendChild(img);
+        };
+        reader.readAsDataURL(files[i]);
+      }
+    });
+  </script>
+</body>
+</html>
